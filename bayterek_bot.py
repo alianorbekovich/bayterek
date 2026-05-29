@@ -1,10 +1,14 @@
 import logging
+import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
 
-TOKEN = "8544157950:AAGPPC_acxKZWu7Z6LzX3qFhW03xIAzyXS0"
+TOKEN = os.environ.get("TOKEN", "8544157950:AAGPPC_acxKZWu7Z6LzX3qFhW03xIAzyXS0")
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 
 MENU = {
     "beshbarmaq": {
@@ -16,7 +20,7 @@ MENU = {
             ("Бешбармоқ (Кичик порция)", "65 000"),
             ("Астау Ассорти", "210 000"),
             ("Астау Ассорти (Катта)", "320 000"),
-            ("Гўштли Ассорти «Байтерек»", "155 000"),
+            ("Гўштли Ассорти Байтерек", "155 000"),
             ("Гўштли Ассорти (Оддий)", "135 000"),
             ("Қази (Донаси)", "15 000"),
             ("Қўшимча Хамир (100 гр)", "20 000"),
@@ -52,10 +56,10 @@ MENU = {
     "salat": {
         "title": "🥗 Салатлар (300 гр)",
         "items": [
-            ("«Байтерек» фирмий салати", "50 000"),
-            ("«Мимоза» салати", "45 000"),
-            ("«Сельдь под шубой»", "45 000"),
-            ("«Оливье» салати", "40 000"),
+            ("Байтерек фирмий салати", "50 000"),
+            ("Мимоза салати", "45 000"),
+            ("Сельдь под шубой", "45 000"),
+            ("Оливье салати", "40 000"),
             ("Грекча салат", "45 000"),
             ("Цезар салати", "45 000"),
             ("Пикантный салати", "45 000"),
@@ -87,12 +91,12 @@ MENU = {
     "ichimlik": {
         "title": "🥤 Сувлар ва Ичимликлар",
         "items": [
-            ("Coca-Cola / Fanta / Pepsi", "— нарх сўранг"),
-            ("Сок «Сочная долина»", "— нарх сўранг"),
-            ("Чортоқ минерал суви", "— нарх сўранг"),
-            ("Biolife минерал суви", "— нарх сўранг"),
-            ("Уй кампоти", "— нарх сўранг"),
-            ("Тоза Қимиз", "— нарх сўранг"),
+            ("Coca-Cola / Fanta / Pepsi", "нарх сўранг"),
+            ("Сок Сочная долина", "нарх сўранг"),
+            ("Чортоқ минерал суви", "нарх сўранг"),
+            ("Biolife минерал суви", "нарх сўранг"),
+            ("Уй кампоти", "нарх сўранг"),
+            ("Тоза Қимиз", "нарх сўранг"),
         ]
     },
 }
@@ -127,10 +131,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = query.data
 
     if data == "main":
-        text = (
-            "🍽 *БАЙТЕРЕК — МИЛЛИЙ ТАОМЛАР МАСКАНИ* ✨\n\n"
-            "Бўлимни танланг:"
-        )
+        text = "🍽 *БАЙТЕРЕК* ✨\n\nБўлимни танланг:"
         await query.edit_message_text(text, reply_markup=main_keyboard(), parse_mode="Markdown")
 
     elif data in MENU:
@@ -145,8 +146,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = (
             "📞 *Буюртма бериш учун:*\n\n"
             "📱 +998 99 788-60-67\n\n"
-            "🚀 Етказиб бериш хизмати мавжуд!\n\n"
-            "Биз билан боғланинг — хурсандчилик билан хизмат қиламиз! 😊"
+            "🚀 Етказиб бериш хизмати мавжуд!"
         )
         await query.edit_message_text(text, reply_markup=back_keyboard(), parse_mode="Markdown")
 
@@ -155,17 +155,13 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "📍 *Манзилимиз:*\n\n"
             "Қибрай тумани, Уймоут,\n"
             "Соҳибкор кўчаси, 156-уй\n\n"
-            "🕐 Иш вақти: ҳар куни\n"
             "📱 +998 99 788-60-67"
         )
         await query.edit_message_text(text, reply_markup=back_keyboard(), parse_mode="Markdown")
 
-def main():
-    app = Application.builder().token(TOKEN).build()
+if __name__ == "__main__":
+    app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button))
-    print("✅ Байтерек боти ишга тушди!")
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
+    print("Bot ishga tushdi!")
+    app.run_polling(drop_pending_updates=True)
