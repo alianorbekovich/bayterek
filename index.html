@@ -1110,18 +1110,26 @@ function setDelivery(type) {
 }
 
 function requestPhone() {
-  if (tg && tg.requestContact) {
-    tg.requestContact((ok, contact) => {
-      if (ok && contact?.phone_number) {
-        userPhone = contact.phone_number;
+  if (tg) {
+    tg.requestContact(function(ok, contact) {
+      if (ok && contact) {
+        userPhone = contact.phone_number || contact.contact?.phone_number;
+        if (userPhone) {
+          renderCheckout();
+          return;
+        }
+      }
+      // Fallback: manual input
+      const phone = prompt('Телефон рақамингизни киритинг:\n(+998XXXXXXXXX)');
+      if (phone && phone.trim()) {
+        userPhone = phone.trim();
         renderCheckout();
       }
     });
   } else {
-    // Demo mode - telefon so'rash
-    const phone = prompt('Телефон рақамингизни киритинг (+998...)');
-    if (phone) {
-      userPhone = phone;
+    const phone = prompt('Телефон рақамингизни киритинг:\n(+998XXXXXXXXX)');
+    if (phone && phone.trim()) {
+      userPhone = phone.trim();
       renderCheckout();
     }
   }
