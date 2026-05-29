@@ -1,114 +1,88 @@
 import logging
 import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters, ConversationHandler
 
 TOKEN = os.environ.get("TOKEN", "8544157950:AAGPPC_acxKZWu7Z6LzX3qFhW03xIAzyXS0")
+ADMIN_ID = 1110117109
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# Menyu
-MENU = {
-    "beshbarmaq": {
-        "title": "🍲 Бешбармоқлар",
-        "items": {
-            "b1": ("Бешбармоқ (1 порция)", 110000),
-            "b2": ("Бешбармоқ (2 порция)", 220000),
-            "b3": ("Бешбармоқ (3 порция)", 330000),
-            "b4": ("Бешбармоқ (Кичик)", 65000),
-            "b5": ("Астау Ассорти", 210000),
-            "b6": ("Астау Ассорти (Катта)", 320000),
-            "b7": ("Гўштли Ассорти Байтерек", 155000),
-            "b8": ("Гўштли Ассорти (Оддий)", 135000),
-            "b9": ("Қази (Донаси)", 15000),
-            "b10": ("Қўшимча Хамир (100гр)", 20000),
-            "b11": ("Хамир устига гўшт (100гр)", 30000),
-        }
-    },
-    "issiq": {
-        "title": "🔥 Иссиқ таомлар",
-        "items": {
-            "i1": ("Қозон кабоб", 60000),
-            "i2": ("Норин (Қазилик)", 45000),
-            "i3": ("Норин (Қазисиз)", 30000),
-            "i4": ("Қовурма Лағмон", 40000),
-            "i5": ("Уйғурча Лағмон", 40000),
-            "i6": ("Тушёнка", 45000),
-            "i7": ("Фаршированный перец", 30000),
-            "i8": ("Пегодя (1 дона)", 10000),
-            "i9": ("Кукси (Катта)", 35000),
-            "i10": ("Кукси (Ўртача)", 30000),
-        }
-    },
-    "shorva": {
-        "title": "🥣 Шўрвалар",
-        "items": {
-            "sh1": ("Шўрва қайнатма", 40000),
-            "sh2": ("Фрикаделка шўрва", 30000),
-            "sh3": ("Чучвара шўрва", 30000),
-            "sh4": ("Чучвара (Қуюқ)", 35000),
-            "sh5": ("Ассорти шўрва", 40000),
-            "sh6": ("Қази бульон", 40000),
-        }
-    },
-    "salat": {
-        "title": "🥗 Салатлар",
-        "items": {
-            "s1": ("Байтерек фирмий салати", 50000),
-            "s2": ("Мимоза", 45000),
-            "s3": ("Сельдь под шубой", 45000),
-            "s4": ("Оливье", 40000),
-            "s5": ("Грекча салат", 45000),
-            "s6": ("Цезар", 45000),
-            "s7": ("Пикантный", 45000),
-            "s8": ("Нежность", 45000),
-            "s9": ("Аппетитный", 45000),
-            "s10": ("Гурман", 45000),
-            "s11": ("Восточный", 45000),
-            "s12": ("Испанский", 45000),
-            "s13": ("Солнце", 45000),
-            "s14": ("Баҳорги салат", 18000),
-            "s15": ("Ачиқ-чучук", 18000),
-        }
-    },
-    "gazak": {
-        "title": "🥒 Газаклар",
-        "items": {
-            "g1": ("Балиқли Хе", 45000),
-            "g2": ("Қозоқча Наггетслар", 45000),
-            "g3": ("Кавказча Ассорти", 35000),
-            "g4": ("Русча Сельдь", 30000),
-            "g5": ("Сабзавотли Ассорти", 22000),
-            "g6": ("Тузламалар Ассортиси", 22000),
-            "g7": ("Сузма", 12000),
-            "g8": ("Баурсак (Донаси)", 3000),
-            "g9": ("Лепёшка", 5000),
-            "g10": ("Лимон (Тилимланган)", 6000),
-        }
-    },
-    "ichimlik": {
-        "title": "🥤 Ичимликлар",
-        "items": {
-            "ich1": ("Coca-Cola", 15000),
-            "ich2": ("Fanta", 15000),
-            "ich3": ("Pepsi", 15000),
-            "ich4": ("Сок Сочная долина", 12000),
-            "ich5": ("Чортоқ минерал суви", 8000),
-            "ich6": ("Biolife минерал суви", 8000),
-            "ich7": ("Уй кампоти", 10000),
-            "ich8": ("Тоза Қимиз", 20000),
-        }
-    },
+# ----- MENYU (dinamik, admin qo'shadi) -----
+# Format: { "item_key": {"name": "...", "price": 110000, "photo": "file_id yoki None", "cat": "cat_key"} }
+MENU_ITEMS = {
+    "b1": {"name": "Бешбармоқ (1 порция)", "price": 110000, "photo": None, "cat": "beshbarmaq"},
+    "b2": {"name": "Бешбармоқ (2 порция)", "price": 220000, "photo": None, "cat": "beshbarmaq"},
+    "b3": {"name": "Бешбармоқ (3 порция)", "price": 330000, "photo": None, "cat": "beshbarmaq"},
+    "b4": {"name": "Бешбармоқ (Кичик)", "price": 65000, "photo": None, "cat": "beshbarmaq"},
+    "b5": {"name": "Астау Ассорти", "price": 210000, "photo": None, "cat": "beshbarmaq"},
+    "b6": {"name": "Астау Ассорти (Катта)", "price": 320000, "photo": None, "cat": "beshbarmaq"},
+    "b7": {"name": "Гўштли Ассорти Байтерек", "price": 155000, "photo": None, "cat": "beshbarmaq"},
+    "b8": {"name": "Гўштли Ассорти (Оддий)", "price": 135000, "photo": None, "cat": "beshbarmaq"},
+    "b9": {"name": "Қази (Донаси)", "price": 15000, "photo": None, "cat": "beshbarmaq"},
+    "b10": {"name": "Қўшимча Хамир (100гр)", "price": 20000, "photo": None, "cat": "beshbarmaq"},
+    "b11": {"name": "Хамир устига гўшт (100гр)", "price": 30000, "photo": None, "cat": "beshbarmaq"},
+    "i1": {"name": "Қозон кабоб", "price": 60000, "photo": None, "cat": "issiq"},
+    "i2": {"name": "Норин (Қазилик)", "price": 45000, "photo": None, "cat": "issiq"},
+    "i3": {"name": "Норин (Қазисиз)", "price": 30000, "photo": None, "cat": "issiq"},
+    "i4": {"name": "Қовурма Лағмон", "price": 40000, "photo": None, "cat": "issiq"},
+    "i5": {"name": "Уйғурча Лағмон", "price": 40000, "photo": None, "cat": "issiq"},
+    "i6": {"name": "Тушёнка", "price": 45000, "photo": None, "cat": "issiq"},
+    "i7": {"name": "Фаршированный перец", "price": 30000, "photo": None, "cat": "issiq"},
+    "i8": {"name": "Пегодя (1 дона)", "price": 10000, "photo": None, "cat": "issiq"},
+    "i9": {"name": "Кукси (Катта)", "price": 35000, "photo": None, "cat": "issiq"},
+    "i10": {"name": "Кукси (Ўртача)", "price": 30000, "photo": None, "cat": "issiq"},
+    "sh1": {"name": "Шўрва қайнатма", "price": 40000, "photo": None, "cat": "shorva"},
+    "sh2": {"name": "Фрикаделка шўрва", "price": 30000, "photo": None, "cat": "shorva"},
+    "sh3": {"name": "Чучвара шўрва", "price": 30000, "photo": None, "cat": "shorva"},
+    "sh4": {"name": "Чучвара (Қуюқ)", "price": 35000, "photo": None, "cat": "shorva"},
+    "sh5": {"name": "Ассорти шўрва", "price": 40000, "photo": None, "cat": "shorva"},
+    "sh6": {"name": "Қази бульон", "price": 40000, "photo": None, "cat": "shorva"},
+    "s1": {"name": "Байтерек фирмий салати", "price": 50000, "photo": None, "cat": "salat"},
+    "s2": {"name": "Мимоза", "price": 45000, "photo": None, "cat": "salat"},
+    "s3": {"name": "Сельдь под шубой", "price": 45000, "photo": None, "cat": "salat"},
+    "s4": {"name": "Оливье", "price": 40000, "photo": None, "cat": "salat"},
+    "s5": {"name": "Грекча салат", "price": 45000, "photo": None, "cat": "salat"},
+    "s6": {"name": "Цезар", "price": 45000, "photo": None, "cat": "salat"},
+    "s7": {"name": "Пикантный", "price": 45000, "photo": None, "cat": "salat"},
+    "s8": {"name": "Нежность", "price": 45000, "photo": None, "cat": "salat"},
+    "s9": {"name": "Аппетитный", "price": 45000, "photo": None, "cat": "salat"},
+    "s10": {"name": "Гурман", "price": 45000, "photo": None, "cat": "salat"},
+    "s14": {"name": "Баҳорги салат", "price": 18000, "photo": None, "cat": "salat"},
+    "s15": {"name": "Ачиқ-чучук", "price": 18000, "photo": None, "cat": "salat"},
+    "g1": {"name": "Балиқли Хе", "price": 45000, "photo": None, "cat": "gazak"},
+    "g2": {"name": "Қозоқча Наггетслар", "price": 45000, "photo": None, "cat": "gazak"},
+    "g3": {"name": "Кавказча Ассорти", "price": 35000, "photo": None, "cat": "gazak"},
+    "g4": {"name": "Русча Сельдь", "price": 30000, "photo": None, "cat": "gazak"},
+    "g5": {"name": "Сабзавотли Ассорти", "price": 22000, "photo": None, "cat": "gazak"},
+    "g6": {"name": "Тузламалар Ассортиси", "price": 22000, "photo": None, "cat": "gazak"},
+    "g7": {"name": "Сузма", "price": 12000, "photo": None, "cat": "gazak"},
+    "g8": {"name": "Баурсак (Донаси)", "price": 3000, "photo": None, "cat": "gazak"},
+    "g9": {"name": "Лепёшка", "price": 5000, "photo": None, "cat": "gazak"},
+    "g10": {"name": "Лимон (Тилимланган)", "price": 6000, "photo": None, "cat": "gazak"},
+    "ich1": {"name": "Coca-Cola", "price": 15000, "photo": None, "cat": "ichimlik"},
+    "ich2": {"name": "Fanta", "price": 15000, "photo": None, "cat": "ichimlik"},
+    "ich3": {"name": "Pepsi", "price": 15000, "photo": None, "cat": "ichimlik"},
+    "ich4": {"name": "Сок Сочная долина", "price": 12000, "photo": None, "cat": "ichimlik"},
+    "ich5": {"name": "Чортоқ минерал суви", "price": 8000, "photo": None, "cat": "ichimlik"},
+    "ich6": {"name": "Biolife минерал суви", "price": 8000, "photo": None, "cat": "ichimlik"},
+    "ich7": {"name": "Уй кампоти", "price": 10000, "photo": None, "cat": "ichimlik"},
+    "ich8": {"name": "Тоза Қимиз", "price": 20000, "photo": None, "cat": "ichimlik"},
 }
 
-# Barcha itemlarni tekshirish uchun
-ALL_ITEMS = {}
-for cat_key, cat_val in MENU.items():
-    for item_key, item_val in cat_val["items"].items():
-        ALL_ITEMS[item_key] = {"name": item_val[0], "price": item_val[1], "cat": cat_key}
+CATEGORIES = {
+    "beshbarmaq": "🍲 Бешбармоқлар",
+    "issiq": "🔥 Иссиқ таомлар",
+    "shorva": "🥣 Шўрвалар",
+    "salat": "🥗 Салатлар",
+    "gazak": "🥒 Газаклар",
+    "ichimlik": "🥤 Ичимликлар",
+}
 
-# Foydalanuvchi savatchalari
+# Savatchalar
 carts = {}
+# Admin state
+admin_state = {}  # {admin_id: {"step": "waiting_photo"/"waiting_name"/"waiting_price", "item_key": "b1", ...}}
 
 def get_cart(user_id):
     if user_id not in carts:
@@ -118,71 +92,94 @@ def get_cart(user_id):
 def format_price(price):
     return f"{price:,}".replace(",", " ")
 
-def main_keyboard():
+# ===== MIJOZ QISMI =====
+
+def main_keyboard(user_id):
+    cart = get_cart(user_id)
+    total_items = sum(cart.values())
+    cart_label = f"🛒 Саватча ({total_items})" if total_items > 0 else "🛒 Саватча"
     keyboard = [
-        [InlineKeyboardButton("🍲 Бешбармоқлар", callback_data="cat_beshbarmaq")],
-        [InlineKeyboardButton("🔥 Иссиқ таомлар", callback_data="cat_issiq")],
-        [InlineKeyboardButton("🥣 Шўрвалар", callback_data="cat_shorva")],
-        [InlineKeyboardButton("🥗 Салатлар", callback_data="cat_salat")],
-        [InlineKeyboardButton("🥒 Газаклар", callback_data="cat_gazak")],
-        [InlineKeyboardButton("🥤 Ичимликлар", callback_data="cat_ichimlik")],
-        [InlineKeyboardButton("🛒 Саватча", callback_data="cart")],
+        [InlineKeyboardButton("🍲 Бешбармоқлар", callback_data="cat_beshbarmaq"),
+         InlineKeyboardButton("🔥 Иссиқ таомлар", callback_data="cat_issiq")],
+        [InlineKeyboardButton("🥣 Шўрвалар", callback_data="cat_shorva"),
+         InlineKeyboardButton("🥗 Салатлар", callback_data="cat_salat")],
+        [InlineKeyboardButton("🥒 Газаклар", callback_data="cat_gazak"),
+         InlineKeyboardButton("🥤 Ичимликлар", callback_data="cat_ichimlik")],
+        [InlineKeyboardButton(cart_label, callback_data="cart")],
         [InlineKeyboardButton("📍 Манзил", callback_data="manzil")],
     ]
     return InlineKeyboardMarkup(keyboard)
 
-def category_keyboard(cat_key, user_id):
-    cat = MENU[cat_key]
+def item_keyboard(item_key, user_id, cat_key):
+    cart = get_cart(user_id)
+    qty = cart.get(item_key, 0)
+    keyboard = []
+    if qty == 0:
+        keyboard.append([InlineKeyboardButton("🛒 Саватга қўшиш", callback_data=f"add_{item_key}")])
+    else:
+        keyboard.append([
+            InlineKeyboardButton("➖", callback_data=f"minus_{item_key}"),
+            InlineKeyboardButton(f"{qty} та", callback_data="noop"),
+            InlineKeyboardButton("➕", callback_data=f"add_{item_key}"),
+        ])
+    keyboard.append([InlineKeyboardButton("🔙 Рўйхатга қайтиш", callback_data=f"cat_{cat_key}")])
+    keyboard.append([InlineKeyboardButton("🛒 Саватча", callback_data="cart")])
+    return InlineKeyboardMarkup(keyboard)
+
+def cat_list_keyboard(cat_key, user_id, page=0):
+    items = [(k, v) for k, v in MENU_ITEMS.items() if v["cat"] == cat_key]
     cart = get_cart(user_id)
     keyboard = []
-    for item_key, (name, price) in cat["items"].items():
+    for item_key, item in items:
         qty = cart.get(item_key, 0)
-        if qty > 0:
-            btn_text = f"✅ {name} — {format_price(price)} сўм  [{qty}]"
-        else:
-            btn_text = f"{name} — {format_price(price)} сўм"
-        keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"add_{item_key}")])
-    keyboard.append([InlineKeyboardButton("🛒 Саватча", callback_data="cart")])
-    keyboard.append([InlineKeyboardButton("🔙 Асосий меню", callback_data="main")])
+        mark = f" ✅{qty}" if qty > 0 else ""
+        keyboard.append([InlineKeyboardButton(
+            f"{item['name']} — {format_price(item['price'])} сўм{mark}",
+            callback_data=f"item_{item_key}"
+        )])
+    cart_total = sum(cart.values())
+    cart_label = f"🛒 Саватча ({cart_total})" if cart_total > 0 else "🛒 Саватча"
+    keyboard.append([InlineKeyboardButton(cart_label, callback_data="cart")])
+    keyboard.append([InlineKeyboardButton("🔙 Бош меню", callback_data="main")])
     return InlineKeyboardMarkup(keyboard)
 
 def cart_keyboard(user_id):
-    cart = get_cart(user_id)
+    cart = {k: v for k, v in get_cart(user_id).items() if v > 0}
     keyboard = []
     for item_key, qty in cart.items():
-        if qty > 0:
-            item = ALL_ITEMS[item_key]
-            keyboard.append([
-                InlineKeyboardButton(f"➖", callback_data=f"minus_{item_key}"),
-                InlineKeyboardButton(f"{item['name']} x{qty}", callback_data="noop"),
-                InlineKeyboardButton(f"➕", callback_data=f"add_{item_key}"),
-            ])
-    if cart and any(v > 0 for v in cart.values()):
+        item = MENU_ITEMS[item_key]
+        keyboard.append([
+            InlineKeyboardButton("➖", callback_data=f"cminus_{item_key}"),
+            InlineKeyboardButton(f"{item['name'][:20]} x{qty}", callback_data="noop"),
+            InlineKeyboardButton("➕", callback_data=f"cadd_{item_key}"),
+        ])
+    if cart:
         keyboard.append([InlineKeyboardButton("✅ Буюртма бериш", callback_data="order")])
-    keyboard.append([InlineKeyboardButton("🔙 Асосий меню", callback_data="main")])
+    keyboard.append([InlineKeyboardButton("🔙 Бош меню", callback_data="main")])
     return InlineKeyboardMarkup(keyboard)
 
 def cart_text(user_id):
-    cart = get_cart(user_id)
-    items = {k: v for k, v in cart.items() if v > 0}
-    if not items:
-        return "🛒 Саватча бўш\n\nМаҳсулот қўшиш учун менюдан танланг:"
-    
+    cart = {k: v for k, v in get_cart(user_id).items() if v > 0}
+    if not cart:
+        return "🛒 *Саватча бўш*\n\nМенюдан таом танланг 👇"
     lines = ["🛒 *Сизнинг буюртмангиз:*\n"]
     total = 0
-    for item_key, qty in items.items():
-        item = ALL_ITEMS[item_key]
-        subtotal = item["price"] * qty
-        total += subtotal
-        lines.append(f"• {item['name']} x{qty} = *{format_price(subtotal)} сўм*")
+    for item_key, qty in cart.items():
+        item = MENU_ITEMS[item_key]
+        sub = item["price"] * qty
+        total += sub
+        lines.append(f"• {item['name']} x{qty} = *{format_price(sub)} сўм*")
     lines.append(f"\n💰 *Жами: {format_price(total)} сўм*")
     return "\n".join(lines)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
+    if user_id == ADMIN_ID:
+        await admin_panel(update, context)
+        return
     carts[user_id] = {}
-    text = "🍽 *БАЙТЕРЕК — МИЛЛИЙ ТАОМЛАР МАСКАНИ* ✨\n\nХуш келибсиз! Маҳсулот танланг:"
-    await update.message.reply_text(text, reply_markup=main_keyboard(), parse_mode="Markdown")
+    text = "🍽 *БАЙТЕРЕК — МИЛЛИЙ ТАОМЛАР МАСКАНИ* ✨\n\nХуш келибсиз! Таом танланг:"
+    await update.message.reply_text(text, reply_markup=main_keyboard(user_id), parse_mode="Markdown")
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -192,97 +189,232 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cart = get_cart(user_id)
 
     if data == "main":
-        text = "🍽 *БАЙТЕРЕК* ✨\n\nМаҳсулот танланг:"
-        await query.edit_message_text(text, reply_markup=main_keyboard(), parse_mode="Markdown")
+        text = "🍽 *БАЙТЕРЕК* ✨\n\nТаом танланг:"
+        await query.edit_message_text(text, reply_markup=main_keyboard(user_id), parse_mode="Markdown")
 
     elif data.startswith("cat_"):
         cat_key = data[4:]
-        cat = MENU[cat_key]
-        text = f"*{cat['title']}*\n\nМаҳсулот танлаш учун босинг:"
-        await query.edit_message_text(text, reply_markup=category_keyboard(cat_key, user_id), parse_mode="Markdown")
+        cat_name = CATEGORIES.get(cat_key, cat_key)
+        text = f"*{cat_name}*\n\nТаомни танланг:"
+        await query.edit_message_text(text, reply_markup=cat_list_keyboard(cat_key, user_id), parse_mode="Markdown")
+
+    elif data.startswith("item_"):
+        item_key = data[5:]
+        item = MENU_ITEMS[item_key]
+        cat_key = item["cat"]
+        caption = f"*{item['name']}*\n💰 {format_price(item['price'])} сўм"
+        kb = item_keyboard(item_key, user_id, cat_key)
+        if item["photo"]:
+            try:
+                await query.message.delete()
+                await context.bot.send_photo(
+                    chat_id=query.message.chat_id,
+                    photo=item["photo"],
+                    caption=caption,
+                    reply_markup=kb,
+                    parse_mode="Markdown"
+                )
+            except:
+                await query.edit_message_text(caption, reply_markup=kb, parse_mode="Markdown")
+        else:
+            await query.edit_message_text(caption, reply_markup=kb, parse_mode="Markdown")
 
     elif data.startswith("add_"):
         item_key = data[4:]
         cart[item_key] = cart.get(item_key, 0) + 1
-        item = ALL_ITEMS[item_key]
+        item = MENU_ITEMS[item_key]
         cat_key = item["cat"]
-        cat = MENU[cat_key]
-        text = f"*{cat['title']}*\n\n✅ {item['name']} саватчага қўшилди!"
-        await query.edit_message_text(text, reply_markup=category_keyboard(cat_key, user_id), parse_mode="Markdown")
+        caption = f"*{item['name']}*\n💰 {format_price(item['price'])} сўм\n\n✅ Саватга қўшилди!"
+        kb = item_keyboard(item_key, user_id, cat_key)
+        try:
+            await query.edit_message_caption(caption=caption, reply_markup=kb, parse_mode="Markdown")
+        except:
+            await query.edit_message_text(caption, reply_markup=kb, parse_mode="Markdown")
 
     elif data.startswith("minus_"):
         item_key = data[6:]
         if cart.get(item_key, 0) > 0:
             cart[item_key] -= 1
-        text = cart_text(user_id)
-        await query.edit_message_text(text, reply_markup=cart_keyboard(user_id), parse_mode="Markdown")
+        item = MENU_ITEMS[item_key]
+        cat_key = item["cat"]
+        caption = f"*{item['name']}*\n💰 {format_price(item['price'])} сўм"
+        kb = item_keyboard(item_key, user_id, cat_key)
+        try:
+            await query.edit_message_caption(caption=caption, reply_markup=kb, parse_mode="Markdown")
+        except:
+            await query.edit_message_text(caption, reply_markup=kb, parse_mode="Markdown")
+
+    elif data.startswith("cadd_"):
+        item_key = data[5:]
+        cart[item_key] = cart.get(item_key, 0) + 1
+        await query.edit_message_text(cart_text(user_id), reply_markup=cart_keyboard(user_id), parse_mode="Markdown")
+
+    elif data.startswith("cminus_"):
+        item_key = data[7:]
+        if cart.get(item_key, 0) > 0:
+            cart[item_key] -= 1
+        await query.edit_message_text(cart_text(user_id), reply_markup=cart_keyboard(user_id), parse_mode="Markdown")
 
     elif data == "cart":
-        text = cart_text(user_id)
-        await query.edit_message_text(text, reply_markup=cart_keyboard(user_id), parse_mode="Markdown")
+        await query.edit_message_text(cart_text(user_id), reply_markup=cart_keyboard(user_id), parse_mode="Markdown")
 
     elif data == "order":
         items = {k: v for k, v in cart.items() if v > 0}
         if not items:
             await query.answer("Саватча бўш!", show_alert=True)
             return
-        
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("🚗 Етказиб бериш", callback_data="delivery")],
             [InlineKeyboardButton("🏃 Ўзим оламан", callback_data="pickup")],
             [InlineKeyboardButton("🔙 Орқага", callback_data="cart")],
         ])
-        text = cart_text(user_id) + "\n\n*Қандай оласиз?*"
-        await query.edit_message_text(text, reply_markup=keyboard, parse_mode="Markdown")
+        await query.edit_message_text(
+            cart_text(user_id) + "\n\n*Қандай оласиз?*",
+            reply_markup=keyboard, parse_mode="Markdown"
+        )
 
     elif data in ["delivery", "pickup"]:
-        delivery_type = "🚗 Етказиб бериш" if data == "delivery" else "🏃 Ўзим оламан"
-        order_text = cart_text(user_id)
-        total_line = [l for l in order_text.split("\n") if "Жами" in l]
-        total = total_line[0] if total_line else ""
-        
-        confirm_keyboard = InlineKeyboardMarkup([
+        dtype_text = "🚗 Етказиб бериш" if data == "delivery" else "🏃 Ўзим оламан"
+        keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("✅ Тасдиқлаш", callback_data=f"confirm_{data}")],
             [InlineKeyboardButton("🔙 Орқага", callback_data="order")],
         ])
-        text = order_text + f"\n\n📦 *{delivery_type}*\n\nБуюртмани тасдиқлайсизми?"
-        await query.edit_message_text(text, reply_markup=confirm_keyboard, parse_mode="Markdown")
+        await query.edit_message_text(
+            cart_text(user_id) + f"\n\n📦 *{dtype_text}*\n\nТасдиқлайсизми?",
+            reply_markup=keyboard, parse_mode="Markdown"
+        )
 
     elif data.startswith("confirm_"):
         dtype = data[8:]
-        delivery_type = "🚗 Етказиб бериш" if dtype == "delivery" else "🏃 Ўзим оламан"
-        
-        # Buyurtma matnini tuzish
+        dtype_text = "🚗 Етказиб бериш" if dtype == "delivery" else "🏃 Ўзим оламан"
         items = {k: v for k, v in cart.items() if v > 0}
-        total = sum(ALL_ITEMS[k]["price"] * v for k, v in items.items())
-        
-        order_lines = ["✅ *Буюртмангиз қабул қилинди!*\n"]
-        for item_key, qty in items.items():
-            item = ALL_ITEMS[item_key]
-            order_lines.append(f"• {item['name']} x{qty} = {format_price(item['price'] * qty)} сўм")
-        order_lines.append(f"\n💰 *Жами: {format_price(total)} сўм*")
-        order_lines.append(f"📦 *{delivery_type}*")
-        order_lines.append(f"\n📞 Оператор сиз билан боғланади:\n+998 99 788-60-67")
-        
-        # Savatchani tozalash
+        total = sum(MENU_ITEMS[k]["price"] * v for k, v in items.items())
+        user = query.from_user
+        username = f"@{user.username}" if user.username else user.full_name
+
+        # Mijozga xabar
+        lines = ["✅ *Буюртмангиз қабул қилинди!*\n"]
+        for k, v in items.items():
+            item = MENU_ITEMS[k]
+            lines.append(f"• {item['name']} x{v} = {format_price(item['price']*v)} сўм")
+        lines.append(f"\n💰 *Жами: {format_price(total)} сўм*")
+        lines.append(f"📦 *{dtype_text}*")
+        lines.append("\n📞 Оператор сиз билан боғланади!")
+
+        # Adminga xabar
+        admin_lines = [f"🔔 *ЯНГИ БУЮРТМА!*\n"]
+        admin_lines.append(f"👤 Mijoz: {user.full_name} ({username})")
+        admin_lines.append(f"🆔 ID: `{user.id}`\n")
+        for k, v in items.items():
+            item = MENU_ITEMS[k]
+            admin_lines.append(f"• {item['name']} x{v} = {format_price(item['price']*v)} сўм")
+        admin_lines.append(f"\n💰 *Жами: {format_price(total)} сўм*")
+        admin_lines.append(f"📦 *{dtype_text}*")
+
         carts[user_id] = {}
-        
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("🏠 Бош меню", callback_data="main")]
-        ])
-        await query.edit_message_text("\n".join(order_lines), reply_markup=keyboard, parse_mode="Markdown")
+        await query.edit_message_text(
+            "\n".join(lines),
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🏠 Бош меню", callback_data="main")]]),
+            parse_mode="Markdown"
+        )
+        try:
+            await context.bot.send_message(ADMIN_ID, "\n".join(admin_lines), parse_mode="Markdown")
+        except Exception as e:
+            logging.error(f"Admin xabar yuborishda xato: {e}")
 
     elif data == "manzil":
-        text = "📍 *Манзилимиз:*\n\nҚибрай тумани, Уймоут,\nСоҳибкор кўчаси, 156-уй\n\n📱 +998 99 788-60-67\n\n🕐 Ҳар куни очиқ"
-        keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Асосий меню", callback_data="main")]])
-        await query.edit_message_text(text, reply_markup=keyboard, parse_mode="Markdown")
+        text = "📍 *Манзилимиз:*\n\nҚибрай тумани, Уймоут,\nСоҳибкор кўчаси, 156-уй\n\n📱 +998 99 788-60-67"
+        kb = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Бош меню", callback_data="main")]])
+        await query.edit_message_text(text, reply_markup=kb, parse_mode="Markdown")
 
     elif data == "noop":
         pass
 
+    # ===== ADMIN QISMI =====
+    elif data == "admin_menu":
+        await query.edit_message_text(
+            "👨‍💼 *ADMIN PANEL*\n\nNima qilmoqchisiz?",
+            reply_markup=admin_keyboard(),
+            parse_mode="Markdown"
+        )
+    elif data == "admin_list":
+        await show_admin_list(query, context)
+
+    elif data.startswith("admin_edit_"):
+        item_key = data[11:]
+        item = MENU_ITEMS[item_key]
+        photo_status = "✅ Bor" if item["photo"] else "❌ Yo'q"
+        text = (f"*{item['name']}*\n"
+                f"💰 Narx: {format_price(item['price'])} so'm\n"
+                f"🖼 Rasm: {photo_status}\n\n"
+                f"Nima o'zgartirmoqchisiz?")
+        kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🖼 Rasm yuklash", callback_data=f"admin_photo_{item_key}")],
+            [InlineKeyboardButton("🔙 Orqaga", callback_data="admin_list")],
+        ])
+        await query.edit_message_text(text, reply_markup=kb, parse_mode="Markdown")
+
+    elif data.startswith("admin_photo_"):
+        item_key = data[12:]
+        admin_state[user_id] = {"step": "waiting_photo", "item_key": item_key}
+        item = MENU_ITEMS[item_key]
+        await query.edit_message_text(
+            f"🖼 *{item['name']}* uchun rasm yuboring:\n\n(Telegramga rasm yuklang)",
+            parse_mode="Markdown"
+        )
+
+def admin_keyboard():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🖼 Rasm qo'shish", callback_data="admin_list")],
+        [InlineKeyboardButton("🏠 Bosh menyu", callback_data="main")],
+    ])
+
+async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "👨‍💼 *ADMIN PANEL — Bayterek*\n\nXush kelibsiz, Alibek!",
+        reply_markup=admin_keyboard(),
+        parse_mode="Markdown"
+    )
+
+async def show_admin_list(query, context):
+    keyboard = []
+    for item_key, item in MENU_ITEMS.items():
+        photo_mark = "🖼" if item["photo"] else "📷"
+        keyboard.append([InlineKeyboardButton(
+            f"{photo_mark} {item['name']}",
+            callback_data=f"admin_edit_{item_key}"
+        )])
+    keyboard.append([InlineKeyboardButton("🔙 Orqaga", callback_data="admin_menu")])
+    await query.edit_message_text(
+        "📋 *Taomlar ro'yxati:*\n🖼 = rasm bor | 📷 = rasm yo'q",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown"
+    )
+
+async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if user_id != ADMIN_ID:
+        return
+    state = admin_state.get(user_id)
+    if not state or state["step"] != "waiting_photo":
+        return
+    item_key = state["item_key"]
+    photo = update.message.photo[-1]
+    file_id = photo.file_id
+    MENU_ITEMS[item_key]["photo"] = file_id
+    admin_state.pop(user_id, None)
+    item = MENU_ITEMS[item_key]
+    await update.message.reply_text(
+        f"✅ *{item['name']}* uchun rasm saqlandi!",
+        parse_mode="Markdown",
+        reply_markup=admin_keyboard()
+    )
+
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("admin", admin_panel))
     app.add_handler(CallbackQueryHandler(button))
-    print("Bayterek bot ishga tushdi!")
+    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    print("✅ Bayterek bot ishga tushdi!")
     app.run_polling(drop_pending_updates=True)
