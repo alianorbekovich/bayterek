@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Байтерек</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #8B1A1A;
+    --primary-light: #B22222;
+    --gold: #C9972A;
+    --gold-light: #F0C040;
+    --dark: #1a0a0a;
+    --surface: #fff9f5;
+    --surface2: #fff3ea;
+    --text: #2d1a0e;
+    --text2: #6b4c3b;
+    --border: #e8d5c4;
+    --success: #2d7a4f;
+    --cart-bg: #8B1A1A;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--surface);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, var(--primary) 0%, #5c0e0e 100%);
+    padding: 14px 16px 12px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 20px rgba(139,26,26,0.4);
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--gold);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+  }
+  .logo-text {
+    font-family: 'Playfair Display', serif;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+  .logo-sub {
+    color: var(--gold-light);
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    opacity: 0.9;
+  }
+  .cart-btn {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 14px;
+    padding: 8px 14px;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s;
+    backdrop-filter: blur(10px);
+  }
+  .cart-btn:active { transform: scale(0.95); }
+  .cart-count {
+    background: var(--gold);
+    color: var(--dark);
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 12px;
+    font-weight: 700;
+    min-width: 20px;
+    text-align: center;
+  }
+  .cart-count.hidden { display: none; }
+
+  /* CATEGORIES */
+  .categories {
+    display: flex;
+    gap: 8px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    background: white;
+    border-bottom: 1px solid var(--border);
+  }
+  .categories::-webkit-scrollbar { display: none; }
+  .cat-btn {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: white;
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    font-family: 'Nunito', sans-serif;
+  }
+  .cat-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+    box-shadow: 0 4px 12px rgba(139,26,26,0.35);
+  }
+
+  /* PAGES */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* HOME PAGE */
+  .hero-banner {
+    margin: 14px;
+    background: linear-gradient(135deg, #8B1A1A, #C9972A);
+    border-radius: 18px;
+    padding: 20px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-banner::before {
+    content: '🍽';
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 60px;
+    opacity: 0.3;
+  }
+  .hero-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .hero-sub { font-size: 13px; opacity: 0.85; }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    padding: 14px 16px 8px;
+  }
+
+  /* MENU GRID */
+  .menu-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 0 14px 14px;
+  }
+  .menu-card {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid var(--border);
+    position: relative;
+  }
+  .menu-card:active { transform: scale(0.97); }
+  .menu-card-img {
+    width: 100%;
+    height: 130px;
+    object-fit: cover;
+    background: linear-gradient(135deg, #f5e6d3, #edd5b8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 50px;
+  }
+  .menu-card-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .menu-card-body { padding: 10px 10px 12px; }
+  .menu-card-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .menu-card-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .menu-card-price {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--primary);
+  }
+  .add-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .add-btn:active { transform: scale(0.9); background: var(--primary-light); }
+  .qty-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .qty-btn {
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    border: 1.5px solid var(--primary);
+    background: white;
+    color: var(--primary);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .qty-btn.plus { background: var(--primary); color: white; }
+  .qty-num { font-size: 14px; font-weight: 700; min-width: 16px; text-align: center; }
+
+  /* ITEM DETAIL PAGE */
+  .item-detail-img {
+    width: 100%;
+    height: 260px;
+    object-fit: cover;
+    background: linear-gradient(135deg, #f5e6d3, #edd5b8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 100px;
+  }
+  .item-detail-img img { width: 100%; height: 100%; object-fit: cover; }
+  .item-detail-body { padding: 20px 16px; }
+  .item-detail-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .item-detail-price {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 20px;
+  }
+  .item-detail-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 24px;
+  }
+  .qty-big {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface2);
+    border-radius: 14px;
+    padding: 8px 12px;
+  }
+  .qty-big-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .qty-big-btn.minus { background: var(--border); color: var(--text); }
+  .qty-big-btn.plus { background: var(--primary); color: white; }
+  .qty-big-num { font-size: 20px; font-weight: 700; min-width: 24px; text-align: center; }
+  .add-cart-btn {
+    flex: 1;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    transition: all 0.2s;
+  }
+  .add-cart-btn:active { transform: scale(0.97); }
+
+  /* BACK BTN */
+  .back-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: white;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+  }
+  .back-bar span { font-size: 14px; font-weight: 600; color: var(--primary); }
+
+  /* CART PAGE */
+  .cart-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text2);
+  }
+  .cart-empty-icon { font-size: 60px; margin-bottom: 12px; }
+  .cart-empty h3 { font-size: 18px; margin-bottom: 8px; }
+
+  .cart-items { padding: 12px 14px; }
+  .cart-item {
+    background: white;
+    border-radius: 14px;
+    padding: 12px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid var(--border);
+  }
+  .cart-item-img {
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+    object-fit: cover;
+    background: linear-gradient(135deg, #f5e6d3, #edd5b8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .cart-item-img img { width: 100%; height: 100%; object-fit: cover; }
+  .cart-item-info { flex: 1; }
+  .cart-item-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+  .cart-item-price { font-size: 13px; color: var(--primary); font-weight: 700; }
+  .cart-item-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .cart-item-total { font-size: 14px; font-weight: 700; color: var(--text); }
+  .cart-qty {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border-radius: 10px;
+    padding: 4px 8px;
+  }
+  .cqty-btn {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: none;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .cqty-btn.minus { background: var(--border); color: var(--text); }
+  .cqty-btn.plus { background: var(--primary); color: white; }
+  .cqty-num { font-size: 13px; font-weight: 700; min-width: 16px; text-align: center; }
+
+  .cart-summary {
+    background: white;
+    margin: 0 14px;
+    border-radius: 16px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 14px;
+  }
+  .summary-row.total {
+    border-top: 1.5px solid var(--border);
+    margin-top: 8px;
+    padding-top: 12px;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .summary-row.total .price { color: var(--primary); }
+
+  .checkout-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 16px 20px;
+    background: white;
+    border-top: 1px solid var(--border);
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+  }
+  .checkout-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--primary), #5c0e0e);
+    color: white;
+    border: none;
+    border-radius: 16px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s;
+  }
+  .checkout-btn:active { transform: scale(0.98); }
+  .checkout-btn .total { font-size: 15px; }
+
+  /* CHECKOUT PAGE */
+  .checkout-section {
+    background: white;
+    margin: 12px 14px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .checkout-section-title {
+    padding: 14px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .option-row {
+    display: flex;
+    align-items: center;
+    padding: 14px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .option-row:last-child { border-bottom: none; }
+  .option-row:active { background: var(--surface2); }
+  .option-radio {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    margin-right: 12px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  .option-radio.selected {
+    border-color: var(--primary);
+    background: var(--primary);
+  }
+  .option-radio.selected::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    background: white;
+    border-radius: 50%;
+  }
+  .option-text { font-size: 15px; font-weight: 600; }
+  .option-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  .phone-section {
+    background: white;
+    margin: 0 14px 12px;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .phone-btn {
+    width: 100%;
+    padding: 16px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-family: 'Nunito', sans-serif;
+    text-align: left;
+  }
+  .phone-icon {
+    width: 44px;
+    height: 44px;
+    background: var(--surface2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .phone-shared {
+    background: #e8f5ee;
+  }
+  .phone-label { font-size: 15px; font-weight: 700; color: var(--text); }
+  .phone-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .phone-num { font-size: 14px; font-weight: 700; color: var(--success); margin-top: 2px; }
+
+  .place-order-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--primary), #5c0e0e);
+    color: white;
+    border: none;
+    border-radius: 16px;
+    padding: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    margin: 0 14px;
+    width: calc(100% - 28px);
+    transition: all 0.2s;
+  }
+  .place-order-btn:active { transform: scale(0.98); }
+  .place-order-btn:disabled { opacity: 0.5; }
+
+  /* SUCCESS PAGE */
+  .success-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+    padding: 30px 20px;
+    text-align: center;
+  }
+  .success-icon {
+    width: 90px;
+    height: 90px;
+    background: linear-gradient(135deg, #2d7a4f, #1a5c35);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 44px;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 24px rgba(45,122,79,0.3);
+    animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes popIn {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .success-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text);
+  }
+  .success-sub { font-size: 15px; color: var(--text2); line-height: 1.6; margin-bottom: 30px; }
+  .order-num {
+    background: var(--surface2);
+    border-radius: 14px;
+    padding: 14px 24px;
+    margin-bottom: 24px;
+    font-size: 13px;
+    color: var(--text2);
+  }
+  .order-num span { font-size: 20px; font-weight: 700; color: var(--primary); display: block; }
+  .new-order-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    padding: 14px 32px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+  }
+
+  .pb-safe { padding-bottom: 90px; }
+  .mt-12 { margin-top: 12px; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--dark);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
+    <div class="header-logo">
+      <div class="logo-icon">🍽</div>
+      <div>
+        <div class="logo-text">Байтерек</div>
+        <div class="logo-sub">Миллий таомлар маскани</div>
+      </div>
+    </div>
+    <button class="cart-btn" onclick="showPage('cart')">
+      🛒
+      <span class="cart-count hidden" id="cartCount">0</span>
+    </button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- HOME PAGE -->
+<div class="page active" id="page-home">
+  <div class="categories" id="categoryTabs"></div>
+  <div class="hero-banner">
+    <div class="hero-title">Хуш келибсиз! ✨</div>
+    <div class="hero-sub">Шохона миллий таомлар сиз учун</div>
+  </div>
+  <div id="menuContent"></div>
+</div>
+
+<!-- ITEM DETAIL PAGE -->
+<div class="page" id="page-item">
+  <div class="back-bar" onclick="showPage('home')">
+    <span>← Орқага</span>
+  </div>
+  <div id="itemDetailContent"></div>
+</div>
+
+<!-- CART PAGE -->
+<div class="page" id="page-cart">
+  <div class="back-bar" onclick="showPage('home')">
+    <span>← Менюга қайтиш</span>
+  </div>
+  <div id="cartContent"></div>
+</div>
+
+<!-- CHECKOUT PAGE -->
+<div class="page" id="page-checkout">
+  <div class="back-bar" onclick="showPage('cart')">
+    <span>← Саватга қайтиш</span>
+  </div>
+  <div id="checkoutContent"></div>
+</div>
+
+<!-- SUCCESS PAGE -->
+<div class="page" id="page-success">
+  <div class="success-page">
+    <div class="success-icon">✓</div>
+    <div class="success-title">Буюртма қабул қилинди!</div>
+    <div class="success-sub">Оператор сиз билан тез орада боғланади</div>
+    <div class="order-num">Буюртма рақами<span id="orderNum">#000000</span></div>
+    <button class="new-order-btn" onclick="newOrder()">🏠 Бош меню</button>
+  </div>
+</div>
+
+<script>
+// ===== DATA =====
+const CATEGORIES = [
+  { key: 'beshbarmaq', name: '🍲 Бешбармоқ', emoji: '🍲' },
+  { key: 'issiq', name: '🔥 Иссиқ', emoji: '🔥' },
+  { key: 'shorva', name: '🥣 Шўрва', emoji: '🥣' },
+  { key: 'salat', name: '🥗 Салат', emoji: '🥗' },
+  { key: 'gazak', name: '🥒 Газак', emoji: '🥒' },
+  { key: 'ichimlik', name: '🥤 Ичимлик', emoji: '🥤' },
+];
+
+const MENU = {
+  beshbarmaq: [
+    { id: 'b1', name: 'Бешбармоқ (1 порция)', price: 110000, emoji: '🍲', photo: null },
+    { id: 'b2', name: 'Бешбармоқ (2 порция)', price: 220000, emoji: '🍲', photo: null },
+    { id: 'b3', name: 'Бешбармоқ (3 порция)', price: 330000, emoji: '🍲', photo: null },
+    { id: 'b4', name: 'Бешбармоқ (Кичик)', price: 65000, emoji: '🍲', photo: null },
+    { id: 'b5', name: 'Астау Ассорти', price: 210000, emoji: '🫕', photo: null },
+    { id: 'b6', name: 'Астау Ассорти (Катта)', price: 320000, emoji: '🫕', photo: null },
+    { id: 'b7', name: 'Гўштли Ассорти Байтерек', price: 155000, emoji: '🥩', photo: null },
+    { id: 'b8', name: 'Гўштли Ассорти (Оддий)', price: 135000, emoji: '🥩', photo: null },
+    { id: 'b9', name: 'Қази (Донаси)', price: 15000, emoji: '🌭', photo: null },
+    { id: 'b10', name: 'Қўшимча Хамир (100гр)', price: 20000, emoji: '🥟', photo: null },
+    { id: 'b11', name: 'Хамир устига гўшт', price: 30000, emoji: '🥟', photo: null },
+  ],
+  issiq: [
+    { id: 'i1', name: 'Қозон кабоб', price: 60000, emoji: '🍖', photo: null },
+    { id: 'i2', name: 'Норин (Қазилик)', price: 45000, emoji: '🍜', photo: null },
+    { id: 'i3', name: 'Норин (Қазисиз)', price: 30000, emoji: '🍜', photo: null },
+    { id: 'i4', name: 'Қовурма Лағмон', price: 40000, emoji: '🍝', photo: null },
+    { id: 'i5', name: 'Уйғурча Лағмон', price: 40000, emoji: '🍝', photo: null },
+    { id: 'i6', name: 'Тушёнка', price: 45000, emoji: '🥘', photo: null },
+    { id: 'i7', name: 'Фаршированный перец', price: 30000, emoji: '🫑', photo: null },
+    { id: 'i8', name: 'Пегодя (1 дона)', price: 10000, emoji: '🥟', photo: null },
+    { id: 'i9', name: 'Кукси (Катта)', price: 35000, emoji: '🍜', photo: null },
+    { id: 'i10', name: 'Кукси (Ўртача)', price: 30000, emoji: '🍜', photo: null },
+  ],
+  shorva: [
+    { id: 'sh1', name: 'Шўрва қайнатма', price: 40000, emoji: '🍲', photo: null },
+    { id: 'sh2', name: 'Фрикаделка шўрва', price: 30000, emoji: '🍲', photo: null },
+    { id: 'sh3', name: 'Чучвара шўрва', price: 30000, emoji: '🥟', photo: null },
+    { id: 'sh4', name: 'Чучвара (Қуюқ)', price: 35000, emoji: '🥟', photo: null },
+    { id: 'sh5', name: 'Ассорти шўрва', price: 40000, emoji: '🍲', photo: null },
+    { id: 'sh6', name: 'Қази бульон', price: 40000, emoji: '🍵', photo: null },
+  ],
+  salat: [
+    { id: 's1', name: 'Байтерек фирмий салати', price: 50000, emoji: '🥗', photo: null },
+    { id: 's2', name: 'Мимоза', price: 45000, emoji: '🥗', photo: null },
+    { id: 's3', name: 'Сельдь под шубой', price: 45000, emoji: '🥗', photo: null },
+    { id: 's4', name: 'Оливье', price: 40000, emoji: '🥗', photo: null },
+    { id: 's5', name: 'Грекча салат', price: 45000, emoji: '🫒', photo: null },
+    { id: 's6', name: 'Цезар', price: 45000, emoji: '🥗', photo: null },
+    { id: 's7', name: 'Пикантный', price: 45000, emoji: '🌶️', photo: null },
+    { id: 's8', name: 'Нежность', price: 45000, emoji: '🥗', photo: null },
+    { id: 's9', name: 'Аппетитный', price: 45000, emoji: '🥗', photo: null },
+    { id: 's10', name: 'Гурман', price: 45000, emoji: '🥗', photo: null },
+    { id: 's14', name: 'Баҳорги салат', price: 18000, emoji: '🥬', photo: null },
+    { id: 's15', name: 'Ачиқ-чучук', price: 18000, emoji: '🥒', photo: null },
+  ],
+  gazak: [
+    { id: 'g1', name: 'Балиқли Хе', price: 45000, emoji: '🐟', photo: null },
+    { id: 'g2', name: 'Қозоқча Наггетслар', price: 45000, emoji: '🍗', photo: null },
+    { id: 'g3', name: 'Кавказча Ассорти', price: 35000, emoji: '🍽', photo: null },
+    { id: 'g4', name: 'Русча Сельдь', price: 30000, emoji: '🐟', photo: null },
+    { id: 'g5', name: 'Сабзавотли Ассорти', price: 22000, emoji: '🥦', photo: null },
+    { id: 'g6', name: 'Тузламалар Ассортиси', price: 22000, emoji: '🥒', photo: null },
+    { id: 'g7', name: 'Сузма', price: 12000, emoji: '🧀', photo: null },
+    { id: 'g8', name: 'Баурсак (Донаси)', price: 3000, emoji: '🍩', photo: null },
+    { id: 'g9', name: 'Лепёшка', price: 5000, emoji: '🫓', photo: null },
+    { id: 'g10', name: 'Лимон (Тилимланган)', price: 6000, emoji: '🍋', photo: null },
+  ],
+  ichimlik: [
+    { id: 'ich1', name: 'Coca-Cola', price: 15000, emoji: '🥤', photo: null },
+    { id: 'ich2', name: 'Fanta', price: 15000, emoji: '🧃', photo: null },
+    { id: 'ich3', name: 'Pepsi', price: 15000, emoji: '🥤', photo: null },
+    { id: 'ich4', name: 'Сок Сочная долина', price: 12000, emoji: '🧃', photo: null },
+    { id: 'ich5', name: 'Чортоқ минерал суви', price: 8000, emoji: '💧', photo: null },
+    { id: 'ich6', name: 'Biolife минерал суви', price: 8000, emoji: '💧', photo: null },
+    { id: 'ich7', name: 'Уй кампоти', price: 10000, emoji: '🍹', photo: null },
+    { id: 'ich8', name: 'Тоза Қимиз', price: 20000, emoji: '🥛', photo: null },
+  ],
+};
+
+// Flat items map
+const ITEMS_MAP = {};
+Object.values(MENU).flat().forEach(item => ITEMS_MAP[item.id] = item);
+
+// ===== STATE =====
+let cart = {};
+let currentCat = 'beshbarmaq';
+let deliveryType = 'delivery';
+let userPhone = null;
+let currentPage = 'home';
+
+// Telegram WebApp
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.ready();
+  tg.expand();
+}
+
+// ===== UTILS =====
+function fmt(p) {
+  return p.toLocaleString('uz-UZ') + ' сўм';
+}
+
+function getCartTotal() {
+  return Object.entries(cart).reduce((sum, [id, qty]) => sum + (ITEMS_MAP[id]?.price || 0) * qty, 0);
+}
+
+function getCartCount() {
+  return Object.values(cart).reduce((a, b) => a + b, 0);
+}
+
+function updateCartBadge() {
+  const count = getCartCount();
+  const el = document.getElementById('cartCount');
+  if (count > 0) {
+    el.textContent = count;
+    el.classList.remove('hidden');
+  } else {
+    el.classList.add('hidden');
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function imgHtml(item, cls = '') {
+  if (item.photo) {
+    return `<div class="${cls}"><img src="${item.photo}" alt="${item.name}" onerror="this.parentElement.innerHTML='${item.emoji}'"></div>`;
+  }
+  return `<div class="${cls}">${item.emoji}</div>`;
+}
+
+// ===== PAGES =====
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  currentPage = name;
+  if (name === 'home') renderHome();
+  if (name === 'cart') renderCart();
+  if (name === 'checkout') renderCheckout();
+  window.scrollTo(0, 0);
+}
+
+// ===== HOME =====
+function renderCategoryTabs() {
+  const el = document.getElementById('categoryTabs');
+  el.innerHTML = CATEGORIES.map(c => `
+    <button class="cat-btn ${c.key === currentCat ? 'active' : ''}" onclick="selectCat('${c.key}')">
+      ${c.name}
+    </button>
+  `).join('');
+}
+
+function renderMenu() {
+  const items = MENU[currentCat] || [];
+  const el = document.getElementById('menuContent');
+  el.innerHTML = `
+    <div class="section-title">${CATEGORIES.find(c => c.key === currentCat)?.name}</div>
+    <div class="menu-grid">
+      ${items.map(item => {
+        const qty = cart[item.id] || 0;
+        return `
+          <div class="menu-card" onclick="showItemDetail('${item.id}')">
+            ${imgHtml(item, 'menu-card-img')}
+            <div class="menu-card-body">
+              <div class="menu-card-name">${item.name}</div>
+              <div class="menu-card-bottom">
+                <div class="menu-card-price">${fmt(item.price)}</div>
+                ${qty === 0
+                  ? `<button class="add-btn" onclick="event.stopPropagation();addToCart('${item.id}')">+</button>`
+                  : `<div class="qty-control" onclick="event.stopPropagation()">
+                      <button class="qty-btn" onclick="removeFromCart('${item.id}')">−</button>
+                      <span class="qty-num">${qty}</span>
+                      <button class="qty-btn plus" onclick="addToCart('${item.id}')">+</button>
+                    </div>`
+                }
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+    <div style="height:20px"></div>
+  `;
+}
+
+function renderHome() {
+  renderCategoryTabs();
+  renderMenu();
+}
+
+function selectCat(key) {
+  currentCat = key;
+  renderCategoryTabs();
+  renderMenu();
+  // Scroll categories into view
+  document.querySelector(`.cat-btn.active`)?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+}
+
+// ===== ITEM DETAIL =====
+function showItemDetail(itemId) {
+  const item = ITEMS_MAP[itemId];
+  if (!item) return;
+  const qty = cart[itemId] || 0;
+  document.getElementById('itemDetailContent').innerHTML = `
+    ${imgHtml(item, 'item-detail-img')}
+    <div class="item-detail-body">
+      <div class="item-detail-name">${item.name}</div>
+      <div class="item-detail-price">${fmt(item.price)}</div>
+      <div class="item-detail-actions">
+        <div class="qty-big">
+          <button class="qty-big-btn minus" onclick="detailMinus('${itemId}')">−</button>
+          <span class="qty-big-num" id="detailQty">${Math.max(qty, 1)}</span>
+          <button class="qty-big-btn plus" onclick="detailPlus('${itemId}')">+</button>
+        </div>
+        <button class="add-cart-btn" onclick="detailAdd('${itemId}')">
+          🛒 Саватга қўшиш — ${fmt(item.price * Math.max(qty || 0, 1))}
+        </button>
+      </div>
+    </div>
+  `;
+  window._detailQty = Math.max(qty, 1);
+  window._detailItemId = itemId;
+  showPage('item');
+}
+
+function detailPlus(id) {
+  window._detailQty = (window._detailQty || 1) + 1;
+  const item = ITEMS_MAP[id];
+  document.getElementById('detailQty').textContent = window._detailQty;
+  document.querySelector('.add-cart-btn').textContent = `🛒 Саватга қўшиш — ${fmt(item.price * window._detailQty)}`;
+}
+function detailMinus(id) {
+  if (window._detailQty > 1) {
+    window._detailQty--;
+    const item = ITEMS_MAP[id];
+    document.getElementById('detailQty').textContent = window._detailQty;
+    document.querySelector('.add-cart-btn').textContent = `🛒 Саватга қўшиш — ${fmt(item.price * window._detailQty)}`;
+  }
+}
+function detailAdd(id) {
+  cart[id] = window._detailQty || 1;
+  updateCartBadge();
+  showToast('✅ Саватга қўшилди!');
+  setTimeout(() => showPage('home'), 700);
+}
+
+// ===== CART ACTIONS =====
+function addToCart(id) {
+  cart[id] = (cart[id] || 0) + 1;
+  updateCartBadge();
+  renderMenu();
+}
+function removeFromCart(id) {
+  if (cart[id] > 0) cart[id]--;
+  if (cart[id] === 0) delete cart[id];
+  updateCartBadge();
+  renderMenu();
+}
+
+// ===== CART PAGE =====
+function renderCart() {
+  const items = Object.entries(cart).filter(([,q]) => q > 0);
+  const el = document.getElementById('cartContent');
+  if (items.length === 0) {
+    el.innerHTML = `
+      <div class="cart-empty">
+        <div class="cart-empty-icon">🛒</div>
+        <h3>Саватча бўш</h3>
+        <p>Менюдан таом танланг</p>
+      </div>
+    `;
+    return;
+  }
+  const total = getCartTotal();
+  el.innerHTML = `
+    <div class="cart-items">
+      ${items.map(([id, qty]) => {
+        const item = ITEMS_MAP[id];
+        return `
+          <div class="cart-item">
+            ${imgHtml(item, 'cart-item-img')}
+            <div class="cart-item-info">
+              <div class="cart-item-name">${item.name}</div>
+              <div class="cart-item-price">${fmt(item.price)}</div>
+            </div>
+            <div class="cart-item-right">
+              <div class="cart-item-total">${fmt(item.price * qty)}</div>
+              <div class="cart-qty">
+                <button class="cqty-btn minus" onclick="cartMinus('${id}')">−</button>
+                <span class="cqty-num">${qty}</span>
+                <button class="cqty-btn plus" onclick="cartPlus('${id}')">+</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+    <div class="cart-summary">
+      <div class="summary-row">
+        <span>Таомлар сони</span>
+        <span>${getCartCount()} та</span>
+      </div>
+      <div class="summary-row total">
+        <span>Жами</span>
+        <span class="price">${fmt(total)}</span>
+      </div>
+    </div>
+    <div style="height:90px"></div>
+    <div class="checkout-bar">
+      <button class="checkout-btn" onclick="showPage('checkout')">
+        <span>Буюртма бериш</span>
+        <span class="total">${fmt(total)}</span>
+      </button>
+    </div>
+  `;
+}
+
+function cartPlus(id) {
+  cart[id] = (cart[id] || 0) + 1;
+  updateCartBadge();
+  renderCart();
+}
+function cartMinus(id) {
+  if (cart[id] > 1) cart[id]--;
+  else delete cart[id];
+  updateCartBadge();
+  renderCart();
+}
+
+// ===== CHECKOUT PAGE =====
+function renderCheckout() {
+  const total = getCartTotal();
+  const el = document.getElementById('checkoutContent');
+  el.innerHTML = `
+    <div class="checkout-section">
+      <div class="checkout-section-title">Олиш усули</div>
+      <div class="option-row" onclick="setDelivery('delivery')">
+        <div class="option-radio ${deliveryType==='delivery'?'selected':''}" id="radio-delivery"></div>
+        <div>
+          <div class="option-text">🚗 Етказиб бериш</div>
+          <div class="option-sub">Манзилингизга етказамиз</div>
+        </div>
+      </div>
+      <div class="option-row" onclick="setDelivery('pickup')">
+        <div class="option-radio ${deliveryType==='pickup'?'selected':''}" id="radio-pickup"></div>
+        <div>
+          <div class="option-text">🏃 Ўзим оламан</div>
+          <div class="option-sub">Қибрай, Соҳибкор 156</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phone-section">
+      <div class="checkout-section-title">Телефон рақам</div>
+      <button class="phone-btn" onclick="requestPhone()">
+        <div class="phone-icon ${userPhone ? 'phone-shared' : ''}">${userPhone ? '✅' : '📱'}</div>
+        <div>
+          <div class="phone-label">${userPhone ? 'Рақам улашилди' : 'Рақамни улашиш'}</div>
+          ${userPhone ? `<div class="phone-num">${userPhone}</div>` : '<div class="phone-sub">Буюртмани тасдиқлаш учун керак</div>'}
+        </div>
+      </button>
+    </div>
+
+    <div class="checkout-section">
+      <div class="checkout-section-title">Буюртма</div>
+      ${Object.entries(cart).filter(([,q])=>q>0).map(([id,qty]) => {
+        const item = ITEMS_MAP[id];
+        return `<div class="summary-row" style="padding:10px 16px;border-bottom:1px solid var(--border)">
+          <span style="font-size:13px">${item.name} x${qty}</span>
+          <span style="font-size:13px;font-weight:700">${fmt(item.price*qty)}</span>
+        </div>`;
+      }).join('')}
+      <div class="summary-row total" style="padding:12px 16px">
+        <span>Жами</span>
+        <span class="price">${fmt(total)}</span>
+      </div>
+    </div>
+
+    <button class="place-order-btn" onclick="placeOrder()" ${!userPhone ? 'disabled' : ''} id="placeOrderBtn">
+      ✅ Буюртмани тасдиқлаш — ${fmt(total)}
+    </button>
+    <div style="height:30px"></div>
+  `;
+}
+
+function setDelivery(type) {
+  deliveryType = type;
+  renderCheckout();
+}
+
+function requestPhone() {
+  if (tg && tg.requestContact) {
+    tg.requestContact((ok, contact) => {
+      if (ok && contact?.phone_number) {
+        userPhone = contact.phone_number;
+        renderCheckout();
+      }
+    });
+  } else {
+    // Demo mode - telefon so'rash
+    const phone = prompt('Телефон рақамингизни киритинг (+998...)');
+    if (phone) {
+      userPhone = phone;
+      renderCheckout();
+    }
+  }
+}
+
+function placeOrder() {
+  if (!userPhone) {
+    showToast('📱 Телефон рақамни улашинг!');
+    return;
+  }
+  const items = Object.entries(cart).filter(([,q])=>q>0);
+  if (!items.length) return;
+
+  const total = getCartTotal();
+  const dtype = deliveryType === 'delivery' ? '🚗 Етказиб бериш' : '🏃 Ўзим оламан';
+  const orderNum = Math.floor(Math.random() * 900000 + 100000);
+
+  // Telegram WebApp ga yuborish
+  const orderData = {
+    order_number: orderNum,
+    phone: userPhone,
+    delivery: deliveryType,
+    items: items.map(([id,qty]) => ({
+      name: ITEMS_MAP[id].name,
+      price: ITEMS_MAP[id].price,
+      qty,
+      total: ITEMS_MAP[id].price * qty
+    })),
+    total
+  };
+
+  if (tg) {
+    tg.sendData(JSON.stringify(orderData));
+  }
+
+  document.getElementById('orderNum').textContent = '#' + orderNum;
+  cart = {};
+  updateCartBadge();
+  showPage('success');
+}
+
+function newOrder() {
+  userPhone = null;
+  deliveryType = 'delivery';
+  showPage('home');
+}
+
+// ===== INIT =====
+renderHome();
+updateCartBadge();
+</script>
+</body>
+</html>
