@@ -1075,10 +1075,14 @@ function renderCheckout() {
       <div class="checkout-section-title">Телефон рақам</div>
       <button class="phone-btn" onclick="requestPhone()">
         <div class="phone-icon ${userPhone ? 'phone-shared' : ''}">${userPhone ? '✅' : '📱'}</div>
-        <div>
-          <div class="phone-label">${userPhone ? 'Рақам улашилди' : 'Рақамни улашиш'}</div>
-          ${userPhone ? `<div class="phone-num">${userPhone}</div>` : '<div class="phone-sub">Буюртмани тасдиқлаш учун керак</div>'}
+        <div style="flex:1">
+          <div class="phone-label">${userPhone ? 'Рақам тасдиқланди' : '📲 Telegram рақамимни улашиш'}</div>
+          ${userPhone 
+            ? `<div class="phone-num">${userPhone}</div><div style="font-size:11px;color:var(--success);margin-top:2px">✓ Telegram орқали тасдиқланган</div>`
+            : '<div class="phone-sub">Telegram рақамингиз автоматик юборилади — бошқа рақам юбориб бўлмайди</div>'
+          }
         </div>
+        ${!userPhone ? '<span style="font-size:20px">→</span>' : ''}
       </button>
     </div>
 
@@ -1109,45 +1113,23 @@ function setDelivery(type) {
   renderCheckout();
 }
 
-function formatPhone(raw) {
-  let p = raw.replace(/\D/g, '');
-  if (p.startsWith('998')) p = '+' + p;
-  else if (p.startsWith('8') && p.length === 11) p = '+7' + p.slice(1);
-  else if (!p.startsWith('+')) p = '+998' + p;
-  return p;
-}
-
-function askPhoneManually() {
-  const phone = prompt('Телефон рақамингизни киритинг:\n(Намуна: 901234567)');
-  if (!phone || !phone.trim()) return;
-  const formatted = formatPhone(phone.trim());
-  const digits = formatted.replace(/\D/g, '');
-  if (digits.length < 11) {
-    alert('Нотўғри рақам! Қайта киритинг.\nНамуна: 901234567');
-    return askPhoneManually();
-  }
-  userPhone = formatted;
-  localStorage.setItem('bayterek_phone', userPhone);
-  renderCheckout();
-}
-
 function requestPhone() {
-  if (tg && tg.requestContact) {
-    tg.requestContact(function(ok, contact) {
-      if (ok && contact) {
-        const raw = contact.phone_number || contact.contact?.phone_number;
-        if (raw) {
-          userPhone = formatPhone(raw);
-          localStorage.setItem('bayterek_phone', userPhone);
-          renderCheckout();
-          return;
-        }
-      }
-      askPhoneManually();
-    });
-  } else {
-    askPhoneManually();
+  if (!tg || !tg.requestContact) {
+    alert('Илтимос, Telegram орқали очинг!');
+    return;
   }
+  tg.requestContact(function(ok, contact) {
+    if (ok && contact) {
+      const raw = contact.phone_number || (contact.contact && contact.contact.phone_number);
+      if (raw) {
+        userPhone = raw.startsWith('+') ? raw : '+' + raw.replace(/\D/g, '');
+        try { localStorage.setItem('bayterek_phone', userPhone); } catch(e) {}
+        renderCheckout();
+        return;
+      }
+    }
+    alert('Рақамни улашиш зарур! Илтимос қайта уриниб кўринг.');
+  });
 }
 
 function placeOrder() {
