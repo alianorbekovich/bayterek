@@ -1,15 +1,13 @@
 import logging
 import os
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters, ConversationHandler
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
 
 TOKEN = os.environ.get("TOKEN", "8544157950:AAGPPC_acxKZWu7Z6LzX3qFhW03xIAzyXS0")
 ADMIN_ID = 1110117109
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# ----- MENYU (dinamik, admin qo'shadi) -----
-# Format: { "item_key": {"name": "...", "price": 110000, "photo": "file_id yoki None", "cat": "cat_key"} }
 MENU_ITEMS = {
     "b1": {"name": "Бешбармоқ (1 порция)", "price": 110000, "photo": None, "cat": "beshbarmaq"},
     "b2": {"name": "Бешбармоқ (2 порция)", "price": 220000, "photo": None, "cat": "beshbarmaq"},
@@ -79,26 +77,22 @@ CATEGORIES = {
     "ichimlik": "🥤 Ичимликлар",
 }
 
-# Savatchalar
 carts = {}
-# Admin state
-admin_state = {}  # {admin_id: {"step": "waiting_photo"/"waiting_name"/"waiting_price", "item_key": "b1", ...}}
+admin_state = {}
 
 def get_cart(user_id):
     if user_id not in carts:
         carts[user_id] = {}
     return carts[user_id]
 
-def format_price(price):
-    return f"{price:,}".replace(",", " ")
-
-# ===== MIJOZ QISMI =====
+def format_price(p):
+    return f"{p:,}".replace(",", " ")
 
 def main_keyboard(user_id):
     cart = get_cart(user_id)
     total_items = sum(cart.values())
-    cart_label = f"🛒 Саватча ({total_items})" if total_items > 0 else "🛒 Саватча"
-    keyboard = [
+    cart_label = f"🛒 Саватча ({total_items} та)" if total_items > 0 else "🛒 Саватча"
+    return InlineKeyboardMarkup([
         [InlineKeyboardButton("🍲 Бешбармоқлар", callback_data="cat_beshbarmaq"),
          InlineKeyboardButton("🔥 Иссиқ таомлар", callback_data="cat_issiq")],
         [InlineKeyboardButton("🥣 Шўрвалар", callback_data="cat_shorva"),
@@ -107,40 +101,41 @@ def main_keyboard(user_id):
          InlineKeyboardButton("🥤 Ичимликлар", callback_data="cat_ichimlik")],
         [InlineKeyboardButton(cart_label, callback_data="cart")],
         [InlineKeyboardButton("📍 Манзил", callback_data="manzil")],
-    ]
+    ])
+
+def cat_keyboard(cat_key, user_id):
+    items = [(k, v) for k, v in MENU_ITEMS.items() if v["cat"] == cat_key]
+    cart = get_cart(user_id)
+    keyboard = []
+    for item_key, item in items:
+        qty = cart.get(item_key, 0)
+        mark = f" ✅x{qty}" if qty > 0 else ""
+        keyboard.append([InlineKeyboardButton(
+            f"{item['name']} — {format_price(item['price'])} сўм{mark}",
+            callback_data=f"item_{item_key}"
+        )])
+    total = sum(cart.values())
+    cart_label = f"🛒 Саватча ({total} та)" if total > 0 else "🛒 Саватча"
+    keyboard.append([InlineKeyboardButton(cart_label, callback_data="cart")])
+    keyboard.append([InlineKeyboardButton("🔙 Бош меню", callback_data="main")])
     return InlineKeyboardMarkup(keyboard)
 
-def item_keyboard(item_key, user_id, cat_key):
+def item_keyboard(item_key, user_id):
     cart = get_cart(user_id)
     qty = cart.get(item_key, 0)
+    item = MENU_ITEMS[item_key]
+    cat_key = item["cat"]
     keyboard = []
     if qty == 0:
         keyboard.append([InlineKeyboardButton("🛒 Саватга қўшиш", callback_data=f"add_{item_key}")])
     else:
         keyboard.append([
             InlineKeyboardButton("➖", callback_data=f"minus_{item_key}"),
-            InlineKeyboardButton(f"{qty} та", callback_data="noop"),
+            InlineKeyboardButton(f"  {qty} та  ", callback_data="noop"),
             InlineKeyboardButton("➕", callback_data=f"add_{item_key}"),
         ])
     keyboard.append([InlineKeyboardButton("🔙 Рўйхатга қайтиш", callback_data=f"cat_{cat_key}")])
     keyboard.append([InlineKeyboardButton("🛒 Саватча", callback_data="cart")])
-    return InlineKeyboardMarkup(keyboard)
-
-def cat_list_keyboard(cat_key, user_id, page=0):
-    items = [(k, v) for k, v in MENU_ITEMS.items() if v["cat"] == cat_key]
-    cart = get_cart(user_id)
-    keyboard = []
-    for item_key, item in items:
-        qty = cart.get(item_key, 0)
-        mark = f" ✅{qty}" if qty > 0 else ""
-        keyboard.append([InlineKeyboardButton(
-            f"{item['name']} — {format_price(item['price'])} сўм{mark}",
-            callback_data=f"item_{item_key}"
-        )])
-    cart_total = sum(cart.values())
-    cart_label = f"🛒 Саватча ({cart_total})" if cart_total > 0 else "🛒 Саватча"
-    keyboard.append([InlineKeyboardButton(cart_label, callback_data="cart")])
-    keyboard.append([InlineKeyboardButton("🔙 Бош меню", callback_data="main")])
     return InlineKeyboardMarkup(keyboard)
 
 def cart_keyboard(user_id):
@@ -148,9 +143,10 @@ def cart_keyboard(user_id):
     keyboard = []
     for item_key, qty in cart.items():
         item = MENU_ITEMS[item_key]
+        name = item['name'][:22]
         keyboard.append([
             InlineKeyboardButton("➖", callback_data=f"cminus_{item_key}"),
-            InlineKeyboardButton(f"{item['name'][:20]} x{qty}", callback_data="noop"),
+            InlineKeyboardButton(f"{name} x{qty}", callback_data="noop"),
             InlineKeyboardButton("➕", callback_data=f"cadd_{item_key}"),
         ])
     if cart:
@@ -164,125 +160,151 @@ def cart_text(user_id):
         return "🛒 *Саватча бўш*\n\nМенюдан таом танланг 👇"
     lines = ["🛒 *Сизнинг буюртмангиз:*\n"]
     total = 0
-    for item_key, qty in cart.items():
-        item = MENU_ITEMS[item_key]
-        sub = item["price"] * qty
+    for k, v in cart.items():
+        item = MENU_ITEMS[k]
+        sub = item["price"] * v
         total += sub
-        lines.append(f"• {item['name']} x{qty} = *{format_price(sub)} сўм*")
+        lines.append(f"• {item['name']} x{v} = *{format_price(sub)} сўм*")
     lines.append(f"\n💰 *Жами: {format_price(total)} сўм*")
     return "\n".join(lines)
+
+# Rasmli xabarni o'chirb yangi yuborish
+async def send_item(chat_id, item_key, user_id, context, message_id=None):
+    item = MENU_ITEMS[item_key]
+    caption = f"*{item['name']}*\n💰 {format_price(item['price'])} сўм"
+    kb = item_keyboard(item_key, user_id)
+    if message_id:
+        try:
+            await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
+        except:
+            pass
+    if item["photo"]:
+        await context.bot.send_photo(chat_id=chat_id, photo=item["photo"], caption=caption, reply_markup=kb, parse_mode="Markdown")
+    else:
+        await context.bot.send_message(chat_id=chat_id, text=caption, reply_markup=kb, parse_mode="Markdown")
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id == ADMIN_ID:
-        await admin_panel(update, context)
+        await update.message.reply_text(
+            "👨‍💼 *ADMIN PANEL — Bayterek*\n\nXush kelibsiz, Alibek!",
+            reply_markup=admin_keyboard(), parse_mode="Markdown"
+        )
         return
     carts[user_id] = {}
-    text = "🍽 *БАЙТЕРЕК — МИЛЛИЙ ТАОМЛАР МАСКАНИ* ✨\n\nХуш келибсиз! Таом танланг:"
-    await update.message.reply_text(text, reply_markup=main_keyboard(user_id), parse_mode="Markdown")
+    await update.message.reply_text(
+        "🍽 *БАЙТЕРЕК — МИЛЛИЙ ТАОМЛАР МАСКАНИ* ✨\n\nХуш келибсиз! Таом танланг:",
+        reply_markup=main_keyboard(user_id), parse_mode="Markdown"
+    )
 
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
     user_id = query.from_user.id
+    chat_id = query.message.chat_id
+    msg_id = query.message.message_id
     cart = get_cart(user_id)
 
-    if data == "main":
-        text = "🍽 *БАЙТЕРЕК* ✨\n\nТаом танланг:"
-        await query.edit_message_text(text, reply_markup=main_keyboard(user_id), parse_mode="Markdown")
+    if data == "noop":
+        return
+
+    elif data == "main":
+        # Eski xabarni o'chir, yangi matn yubor
+        try:
+            await query.message.delete()
+        except:
+            pass
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="🍽 *БАЙТЕРЕК* ✨\n\nТаом танланг:",
+            reply_markup=main_keyboard(user_id), parse_mode="Markdown"
+        )
 
     elif data.startswith("cat_"):
         cat_key = data[4:]
-        cat_name = CATEGORIES.get(cat_key, cat_key)
-        text = f"*{cat_name}*\n\nТаомни танланг:"
-        await query.edit_message_text(text, reply_markup=cat_list_keyboard(cat_key, user_id), parse_mode="Markdown")
+        cat_name = CATEGORIES.get(cat_key, "")
+        try:
+            await query.message.delete()
+        except:
+            pass
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"*{cat_name}*\n\nТаомни танланг:",
+            reply_markup=cat_keyboard(cat_key, user_id), parse_mode="Markdown"
+        )
 
     elif data.startswith("item_"):
         item_key = data[5:]
-        item = MENU_ITEMS[item_key]
-        cat_key = item["cat"]
-        caption = f"*{item['name']}*\n💰 {format_price(item['price'])} сўм"
-        kb = item_keyboard(item_key, user_id, cat_key)
-        if item["photo"]:
-            try:
-                await query.message.delete()
-                await context.bot.send_photo(
-                    chat_id=query.message.chat_id,
-                    photo=item["photo"],
-                    caption=caption,
-                    reply_markup=kb,
-                    parse_mode="Markdown"
-                )
-            except:
-                await query.edit_message_text(caption, reply_markup=kb, parse_mode="Markdown")
-        else:
-            await query.edit_message_text(caption, reply_markup=kb, parse_mode="Markdown")
+        await send_item(chat_id, item_key, user_id, context, message_id=msg_id)
 
     elif data.startswith("add_"):
         item_key = data[4:]
         cart[item_key] = cart.get(item_key, 0) + 1
-        item = MENU_ITEMS[item_key]
-        cat_key = item["cat"]
-        caption = f"*{item['name']}*\n💰 {format_price(item['price'])} сўм\n\n✅ Саватга қўшилди!"
-        kb = item_keyboard(item_key, user_id, cat_key)
-        try:
-            await query.edit_message_caption(caption=caption, reply_markup=kb, parse_mode="Markdown")
-        except:
-            await query.edit_message_text(caption, reply_markup=kb, parse_mode="Markdown")
+        await send_item(chat_id, item_key, user_id, context, message_id=msg_id)
 
     elif data.startswith("minus_"):
         item_key = data[6:]
         if cart.get(item_key, 0) > 0:
             cart[item_key] -= 1
-        item = MENU_ITEMS[item_key]
-        cat_key = item["cat"]
-        caption = f"*{item['name']}*\n💰 {format_price(item['price'])} сўм"
-        kb = item_keyboard(item_key, user_id, cat_key)
-        try:
-            await query.edit_message_caption(caption=caption, reply_markup=kb, parse_mode="Markdown")
-        except:
-            await query.edit_message_text(caption, reply_markup=kb, parse_mode="Markdown")
+        await send_item(chat_id, item_key, user_id, context, message_id=msg_id)
 
     elif data.startswith("cadd_"):
         item_key = data[5:]
         cart[item_key] = cart.get(item_key, 0) + 1
-        await query.edit_message_text(cart_text(user_id), reply_markup=cart_keyboard(user_id), parse_mode="Markdown")
+        try:
+            await query.edit_message_text(cart_text(user_id), reply_markup=cart_keyboard(user_id), parse_mode="Markdown")
+        except:
+            pass
 
     elif data.startswith("cminus_"):
         item_key = data[7:]
         if cart.get(item_key, 0) > 0:
             cart[item_key] -= 1
-        await query.edit_message_text(cart_text(user_id), reply_markup=cart_keyboard(user_id), parse_mode="Markdown")
+        try:
+            await query.edit_message_text(cart_text(user_id), reply_markup=cart_keyboard(user_id), parse_mode="Markdown")
+        except:
+            pass
 
     elif data == "cart":
-        await query.edit_message_text(cart_text(user_id), reply_markup=cart_keyboard(user_id), parse_mode="Markdown")
+        try:
+            await query.message.delete()
+        except:
+            pass
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=cart_text(user_id),
+            reply_markup=cart_keyboard(user_id), parse_mode="Markdown"
+        )
 
     elif data == "order":
-        items = {k: v for k, v in cart.items() if v > 0}
-        if not items:
+        if not any(v > 0 for v in cart.values()):
             await query.answer("Саватча бўш!", show_alert=True)
             return
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("🚗 Етказиб бериш", callback_data="delivery")],
-            [InlineKeyboardButton("🏃 Ўзим оламан", callback_data="pickup")],
-            [InlineKeyboardButton("🔙 Орқага", callback_data="cart")],
-        ])
-        await query.edit_message_text(
-            cart_text(user_id) + "\n\n*Қандай оласиз?*",
-            reply_markup=keyboard, parse_mode="Markdown"
-        )
+        try:
+            await query.edit_message_text(
+                cart_text(user_id) + "\n\n📦 *Қандай оласиз?*",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🚗 Етказиб бериш", callback_data="delivery")],
+                    [InlineKeyboardButton("🏃 Ўзим оламан", callback_data="pickup")],
+                    [InlineKeyboardButton("🔙 Орқага", callback_data="cart")],
+                ]), parse_mode="Markdown"
+            )
+        except:
+            pass
 
     elif data in ["delivery", "pickup"]:
         dtype_text = "🚗 Етказиб бериш" if data == "delivery" else "🏃 Ўзим оламан"
-        keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("✅ Тасдиқлаш", callback_data=f"confirm_{data}")],
-            [InlineKeyboardButton("🔙 Орқага", callback_data="order")],
-        ])
-        await query.edit_message_text(
-            cart_text(user_id) + f"\n\n📦 *{dtype_text}*\n\nТасдиқлайсизми?",
-            reply_markup=keyboard, parse_mode="Markdown"
-        )
+        try:
+            await query.edit_message_text(
+                cart_text(user_id) + f"\n\n📦 *{dtype_text}*\n\nТасдиқлайсизми?",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("✅ Тасдиқлаш", callback_data=f"confirm_{data}")],
+                    [InlineKeyboardButton("🔙 Орқага", callback_data="order")],
+                ]), parse_mode="Markdown"
+            )
+        except:
+            pass
 
     elif data.startswith("confirm_"):
         dtype = data[8:]
@@ -290,9 +312,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         items = {k: v for k, v in cart.items() if v > 0}
         total = sum(MENU_ITEMS[k]["price"] * v for k, v in items.items())
         user = query.from_user
-        username = f"@{user.username}" if user.username else user.full_name
+        username = f"@{user.username}" if user.username else "yo'q"
 
-        # Mijozga xabar
+        # Mijozga
         lines = ["✅ *Буюртмангиз қабул қилинди!*\n"]
         for k, v in items.items():
             item = MENU_ITEMS[k]
@@ -301,10 +323,10 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.append(f"📦 *{dtype_text}*")
         lines.append("\n📞 Оператор сиз билан боғланади!")
 
-        # Adminga xabar
-        admin_lines = [f"🔔 *ЯНГИ БУЮРТМА!*\n"]
-        admin_lines.append(f"👤 Mijoz: {user.full_name} ({username})")
-        admin_lines.append(f"🆔 ID: `{user.id}`\n")
+        # Adminga
+        admin_lines = ["🔔 *ЯНГИ БУЮРТМА!*\n"]
+        admin_lines.append(f"👤 {user.full_name} ({username})")
+        admin_lines.append(f"📱 ID: `{user.id}`\n")
         for k, v in items.items():
             item = MENU_ITEMS[k]
             admin_lines.append(f"• {item['name']} x{v} = {format_price(item['price']*v)} сўм")
@@ -312,84 +334,84 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         admin_lines.append(f"📦 *{dtype_text}*")
 
         carts[user_id] = {}
-        await query.edit_message_text(
-            "\n".join(lines),
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🏠 Бош меню", callback_data="main")]]),
-            parse_mode="Markdown"
-        )
+
+        try:
+            await query.edit_message_text(
+                "\n".join(lines),
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🏠 Бош меню", callback_data="main")]]),
+                parse_mode="Markdown"
+            )
+        except:
+            pass
+
         try:
             await context.bot.send_message(ADMIN_ID, "\n".join(admin_lines), parse_mode="Markdown")
         except Exception as e:
-            logging.error(f"Admin xabar yuborishda xato: {e}")
+            logging.error(f"Admin xabar xato: {e}")
 
     elif data == "manzil":
-        text = "📍 *Манзилимиз:*\n\nҚибрай тумани, Уймоут,\nСоҳибкор кўчаси, 156-уй\n\n📱 +998 99 788-60-67"
-        kb = InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Бош меню", callback_data="main")]])
-        await query.edit_message_text(text, reply_markup=kb, parse_mode="Markdown")
+        try:
+            await query.edit_message_text(
+                "📍 *Манзилимиз:*\n\nҚибрай тумани, Уймоут,\nСоҳибкор кўчаси, 156-уй\n\n📱 +998 99 788-60-67",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Бош меню", callback_data="main")]]),
+                parse_mode="Markdown"
+            )
+        except:
+            pass
 
-    elif data == "noop":
-        pass
-
-    # ===== ADMIN QISMI =====
+    # ===== ADMIN =====
     elif data == "admin_menu":
-        await query.edit_message_text(
-            "👨‍💼 *ADMIN PANEL*\n\nNima qilmoqchisiz?",
-            reply_markup=admin_keyboard(),
-            parse_mode="Markdown"
-        )
+        try:
+            await query.edit_message_text("👨‍💼 *ADMIN PANEL*", reply_markup=admin_keyboard(), parse_mode="Markdown")
+        except:
+            pass
+
     elif data == "admin_list":
-        await show_admin_list(query, context)
+        keyboard = []
+        for item_key, item in MENU_ITEMS.items():
+            mark = "🖼" if item["photo"] else "📷"
+            keyboard.append([InlineKeyboardButton(f"{mark} {item['name']}", callback_data=f"admin_edit_{item_key}")])
+        keyboard.append([InlineKeyboardButton("🔙 Orqaga", callback_data="admin_menu")])
+        try:
+            await query.edit_message_text(
+                "📋 *Taomlar:*\n🖼 rasm bor | 📷 rasm yo'q",
+                reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown"
+            )
+        except:
+            pass
 
     elif data.startswith("admin_edit_"):
         item_key = data[11:]
         item = MENU_ITEMS[item_key]
         photo_status = "✅ Bor" if item["photo"] else "❌ Yo'q"
-        text = (f"*{item['name']}*\n"
-                f"💰 Narx: {format_price(item['price'])} so'm\n"
-                f"🖼 Rasm: {photo_status}\n\n"
-                f"Nima o'zgartirmoqchisiz?")
-        kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("🖼 Rasm yuklash", callback_data=f"admin_photo_{item_key}")],
-            [InlineKeyboardButton("🔙 Orqaga", callback_data="admin_list")],
-        ])
-        await query.edit_message_text(text, reply_markup=kb, parse_mode="Markdown")
+        try:
+            await query.edit_message_text(
+                f"*{item['name']}*\n💰 {format_price(item['price'])} so'm\n🖼 Rasm: {photo_status}",
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("🖼 Rasm yuklash", callback_data=f"admin_photo_{item_key}")],
+                    [InlineKeyboardButton("🔙 Orqaga", callback_data="admin_list")],
+                ]), parse_mode="Markdown"
+            )
+        except:
+            pass
 
     elif data.startswith("admin_photo_"):
         item_key = data[12:]
         admin_state[user_id] = {"step": "waiting_photo", "item_key": item_key}
         item = MENU_ITEMS[item_key]
-        await query.edit_message_text(
-            f"🖼 *{item['name']}* uchun rasm yuboring:\n\n(Telegramga rasm yuklang)",
-            parse_mode="Markdown"
-        )
+        try:
+            await query.edit_message_text(
+                f"🖼 *{item['name']}* uchun rasm yuboring:",
+                parse_mode="Markdown"
+            )
+        except:
+            pass
 
 def admin_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🖼 Rasm qo'shish", callback_data="admin_list")],
-        [InlineKeyboardButton("🏠 Bosh menyu", callback_data="main")],
+        [InlineKeyboardButton("🏠 Mijoz menyu", callback_data="main")],
     ])
-
-async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "👨‍💼 *ADMIN PANEL — Bayterek*\n\nXush kelibsiz, Alibek!",
-        reply_markup=admin_keyboard(),
-        parse_mode="Markdown"
-    )
-
-async def show_admin_list(query, context):
-    keyboard = []
-    for item_key, item in MENU_ITEMS.items():
-        photo_mark = "🖼" if item["photo"] else "📷"
-        keyboard.append([InlineKeyboardButton(
-            f"{photo_mark} {item['name']}",
-            callback_data=f"admin_edit_{item_key}"
-        )])
-    keyboard.append([InlineKeyboardButton("🔙 Orqaga", callback_data="admin_menu")])
-    await query.edit_message_text(
-        "📋 *Taomlar ro'yxati:*\n🖼 = rasm bor | 📷 = rasm yo'q",
-        reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode="Markdown"
-    )
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
@@ -399,13 +421,13 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not state or state["step"] != "waiting_photo":
         return
     item_key = state["item_key"]
-    photo = update.message.photo[-1]
-    file_id = photo.file_id
+    file_id = update.message.photo[-1].file_id
     MENU_ITEMS[item_key]["photo"] = file_id
     admin_state.pop(user_id, None)
     item = MENU_ITEMS[item_key]
-    await update.message.reply_text(
-        f"✅ *{item['name']}* uchun rasm saqlandi!",
+    await update.message.reply_photo(
+        photo=file_id,
+        caption=f"✅ *{item['name']}* uchun rasm saqlandi!",
         parse_mode="Markdown",
         reply_markup=admin_keyboard()
     )
@@ -413,7 +435,6 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("admin", admin_panel))
     app.add_handler(CallbackQueryHandler(button))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     print("✅ Bayterek bot ishga tushdi!")
