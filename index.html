@@ -802,7 +802,7 @@ Object.values(MENU).flat().forEach(item => ITEMS_MAP[item.id] = item);
 let cart = {};
 let currentCat = 'beshbarmaq';
 let deliveryType = 'delivery';
-let userPhone = null;
+let userPhone = localStorage.getItem('bayterek_phone') || null;
 let currentPage = 'home';
 
 // Telegram WebApp
@@ -1109,29 +1109,44 @@ function setDelivery(type) {
   renderCheckout();
 }
 
+function formatPhone(raw) {
+  let p = raw.replace(/\D/g, '');
+  if (p.startsWith('998')) p = '+' + p;
+  else if (p.startsWith('8') && p.length === 11) p = '+7' + p.slice(1);
+  else if (!p.startsWith('+')) p = '+998' + p;
+  return p;
+}
+
+function askPhoneManually() {
+  const phone = prompt('Телефон рақамингизни киритинг:\n(Намуна: 901234567)');
+  if (!phone || !phone.trim()) return;
+  const formatted = formatPhone(phone.trim());
+  const digits = formatted.replace(/\D/g, '');
+  if (digits.length < 11) {
+    alert('Нотўғри рақам! Қайта киритинг.\nНамуна: 901234567');
+    return askPhoneManually();
+  }
+  userPhone = formatted;
+  localStorage.setItem('bayterek_phone', userPhone);
+  renderCheckout();
+}
+
 function requestPhone() {
-  if (tg) {
+  if (tg && tg.requestContact) {
     tg.requestContact(function(ok, contact) {
       if (ok && contact) {
-        userPhone = contact.phone_number || contact.contact?.phone_number;
-        if (userPhone) {
+        const raw = contact.phone_number || contact.contact?.phone_number;
+        if (raw) {
+          userPhone = formatPhone(raw);
+          localStorage.setItem('bayterek_phone', userPhone);
           renderCheckout();
           return;
         }
       }
-      // Fallback: manual input
-      const phone = prompt('Телефон рақамингизни киритинг:\n(+998XXXXXXXXX)');
-      if (phone && phone.trim()) {
-        userPhone = phone.trim();
-        renderCheckout();
-      }
+      askPhoneManually();
     });
   } else {
-    const phone = prompt('Телефон рақамингизни киритинг:\n(+998XXXXXXXXX)');
-    if (phone && phone.trim()) {
-      userPhone = phone.trim();
-      renderCheckout();
-    }
+    askPhoneManually();
   }
 }
 
@@ -1161,8 +1176,33 @@ function placeOrder() {
     total
   };
 
+  // Bot ga yuborish
+  const ADMIN_ID = 1110117109;
+  const TOKEN = '8544157950:AAGPPC_acxKZWu7Z6LzX3qFhW03xIAzyXS0';
+  
+  let msg = '🔔 *YANGI BUYURTMA!*\n\n';
+  msg += `👤 Mijoz: ${tg?.initDataUnsafe?.user?.first_name || 'Noma'lum'}\n`;
+  msg += `📱 Tel: ${userPhone}\n\n`;
+  msg += `📦 *${orderData.delivery === 'delivery' ? '🚗 Yetkazib berish' : '🏃 O\'zim olaman'}*\n\n`;
+  msg += '*Buyurtma:*\n';
+  orderData.items.forEach(it => {
+    msg += `• ${it.name} x${it.qty} = ${it.total.toLocaleString()} so'm\n`;
+  });
+  msg += `\n💰 *Jami: ${orderData.total.toLocaleString()} so'm*`;
+  msg += `\n🔢 Buyurtma: #${orderNum}`;
+
+  fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      chat_id: ADMIN_ID,
+      text: msg,
+      parse_mode: 'Markdown'
+    })
+  }).catch(e => console.log('Bot xabar xato:', e));
+
   if (tg) {
-    tg.sendData(JSON.stringify(orderData));
+    try { tg.sendData(JSON.stringify({order: orderNum, phone: userPhone})); } catch(e) {}
   }
 
   document.getElementById('orderNum').textContent = '#' + orderNum;
@@ -1172,7 +1212,7 @@ function placeOrder() {
 }
 
 function newOrder() {
-  userPhone = null;
+  // userPhone saqlanib qoladi
   deliveryType = 'delivery';
   showPage('home');
 }
